@@ -408,8 +408,9 @@ const fetchPlaces = async (
 };
 
 const App = () => {
-  const [screen, setScreen] = useState<"scanner" | "list" | "detail">("scanner");
-  const [hotel, setHotel] = useState<Hotel | null>(null);
+  // Initialiser avec la liste des lieux au lieu du scanner
+  const [screen, setScreen] = useState<"scanner" | "list" | "detail">("list");
+  const [hotel, setHotel] = useState<Hotel | null>(mockHotels[0]); // Initialiser avec le premier hôtel par défaut
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(false);
@@ -424,6 +425,22 @@ const App = () => {
   const [scanned, setScanned] = useState(false);
 
   const [permission, requestPermission] = useCameraPermissions();
+
+  // Charger les lieux au démarrage
+  useEffect(() => {
+    const initPlaces = async () => {
+      setLoading(true);
+      const result = await fetchPlaces(
+        mockHotels[0].latitude,
+        mockHotels[0].longitude,
+        null,
+        20
+      );
+      setPlaces(result);
+      setLoading(false);
+    };
+    initPlaces();
+  }, []);
 
   const useMyGps = async () => {
     try {
