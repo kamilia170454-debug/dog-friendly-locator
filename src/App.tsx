@@ -12,12 +12,6 @@ import {
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = "https://YOUR_PROJECT_ID.supabase.co";
-const supabaseAnonKey = "YOUR_SUPABASE_ANON_KEY";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type Category = "restaurant" | "cafe" | "balade" | "plage" | "hotel";
 
@@ -90,29 +84,328 @@ const parseQrCode = (raw: string) => {
   return raw;
 };
 
-const transformPlace = (row: any): Place => ({
-  id: row.id,
-  name: row.name,
-  category: row.category_id || "restaurant",
-  city: row.city,
-  address: row.address || "",
-  latitude: row.latitude,
-  longitude: row.longitude,
-  phone: row.phone,
-  website: row.website,
-  description: row.description,
-  dog_friendly: Boolean(row.dog_friendly),
-  terrace_allowed: Boolean(row.terrace_allowed),
-  inside_allowed: Boolean(row.inside_allowed),
-  leash_required: Boolean(row.leash_required),
-  water_bowl: Boolean(row.water_bowl),
-  beach_access: Boolean(row.beach_access),
-  parking_available: row.parking_available,
-  wheelchair_accessible: row.wheelchair_accessible,
-  rating_avg: Number(row.rating_avg || 0),
-  review_count: Number(row.review_count || 0),
-  distance_km: row.distance_km || undefined,
-});
+const mockHotels: Hotel[] = [
+  {
+    id: "hotel-paris",
+    name: "Hôtel Paris Marais",
+    city: "Paris",
+    address: "45 Rue de Turenne",
+    latitude: 48.8615,
+    longitude: 2.3659,
+    radius_km: 20,
+  },
+  {
+    id: "hotel-lyon",
+    name: "Hôtel Lyon Confluence",
+    city: "Lyon",
+    address: "87 Quai Saint-Antoine",
+    latitude: 45.729,
+    longitude: 4.8244,
+    radius_km: 20,
+  },
+  {
+    id: "hotel-marseille",
+    name: "Hôtel Marseille Vieux Port",
+    city: "Marseille",
+    address: "15 Rue Grignan",
+    latitude: 43.2965,
+    longitude: 5.3698,
+    radius_km: 20,
+  },
+  {
+    id: "hotel-nice",
+    name: "Hôtel Nice Promenade",
+    city: "Nice",
+    address: "23 Avenue de la Promenade",
+    latitude: 43.6941,
+    longitude: 7.2589,
+    radius_km: 20,
+  },
+  {
+    id: "hotel-bordeaux",
+    name: "Hôtel Bordeaux Chartrons",
+    city: "Bordeaux",
+    address: "12 Rue Ferrère",
+    latitude: 44.8378,
+    longitude: -0.5744,
+    radius_km: 20,
+  },
+];
+
+const qrHotelMap: Record<string, Hotel> = {
+  PARIS1: mockHotels[0],
+  LYON1: mockHotels[1],
+  MARSEILLE1: mockHotels[2],
+  NICE1: mockHotels[3],
+  BORDEAUX1: mockHotels[4],
+};
+
+const mockPlaces: Place[] = [
+  {
+    id: "place-1",
+    name: "Le Jardin du Palais",
+    category: "restaurant",
+    city: "Paris",
+    address: "25 Rue de Turenne",
+    latitude: 48.8615,
+    longitude: 2.3659,
+    phone: "+33 1 42 72 10 10",
+    description: "Restaurant dog-friendly avec terrasse spacieuse.",
+    dog_friendly: true,
+    terrace_allowed: true,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: true,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.6,
+    review_count: 92,
+  },
+  {
+    id: "place-2",
+    name: "Bistrot des Quais",
+    category: "restaurant",
+    city: "Lyon",
+    address: "32 Quai Saint-Antoine",
+    latitude: 45.729,
+    longitude: 4.8244,
+    phone: "+33 4 72 10 00 00",
+    description: "Terrasse vue sur la Saône, très accueillant pour les chiens.",
+    dog_friendly: true,
+    terrace_allowed: true,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: true,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.7,
+    review_count: 140,
+  },
+  {
+    id: "place-3",
+    name: "Café des Artistes",
+    category: "cafe",
+    city: "Paris",
+    address: "78 Rue de Rivoli",
+    latitude: 48.8613,
+    longitude: 2.3582,
+    phone: "+33 1 42 61 40 40",
+    description: "Café cosy avec terrasse et gamelles d'eau pour chiens.",
+    dog_friendly: true,
+    terrace_allowed: true,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: true,
+    beach_access: false,
+    parking_available: false,
+    wheelchair_accessible: true,
+    rating_avg: 4.4,
+    review_count: 64,
+  },
+  {
+    id: "place-4",
+    name: "Parc des Buttes-aux-Cailles",
+    category: "balade",
+    city: "Paris",
+    address: "Rue Butte-aux-Cailles",
+    latitude: 48.8273,
+    longitude: 2.3585,
+    description: "Parc urbain sympathique pour balade avec chien en laisse.",
+    dog_friendly: true,
+    terrace_allowed: false,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: false,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.7,
+    review_count: 88,
+  },
+  {
+    id: "place-5",
+    name: "Parc de la Tête d'Or",
+    category: "balade",
+    city: "Lyon",
+    address: "Boulevard de la Corniche",
+    latitude: 45.7677,
+    longitude: 4.838,
+    description: "Grand parc avec sentiers, eau et belle promenade.",
+    dog_friendly: true,
+    terrace_allowed: false,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: false,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.8,
+    review_count: 120,
+  },
+  {
+    id: "place-6",
+    name: "Plage des Catalans",
+    category: "plage",
+    city: "Marseille",
+    address: "Boulevard des Catalans",
+    latitude: 43.3087,
+    longitude: 5.3398,
+    description: "Plage animée, accueil des chiens en laisse hors saison.",
+    dog_friendly: true,
+    terrace_allowed: false,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: false,
+    beach_access: true,
+    parking_available: true,
+    wheelchair_accessible: false,
+    rating_avg: 4.5,
+    review_count: 83,
+  },
+  {
+    id: "place-7",
+    name: "La Bouillabaisse du Port",
+    category: "restaurant",
+    city: "Marseille",
+    address: "25 Quai des Belges",
+    latitude: 43.2965,
+    longitude: 5.3698,
+    phone: "+33 4 91 22 22 22",
+    description: "Restaurant traditionnel avec terrasse face au port.",
+    dog_friendly: true,
+    terrace_allowed: true,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: true,
+    beach_access: false,
+    parking_available: false,
+    wheelchair_accessible: true,
+    rating_avg: 4.7,
+    review_count: 96,
+  },
+  {
+    id: "place-8",
+    name: "Plage de la Baie des Anges",
+    category: "plage",
+    city: "Nice",
+    address: "Promenade des Anglais",
+    latitude: 43.6941,
+    longitude: 7.2589,
+    description: "Plage très connue, chien toléré en laisse hors saison.",
+    dog_friendly: true,
+    terrace_allowed: false,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: false,
+    beach_access: true,
+    parking_available: true,
+    wheelchair_accessible: false,
+    rating_avg: 4.4,
+    review_count: 76,
+  },
+  {
+    id: "place-9",
+    name: "Le Niçois Gourmand",
+    category: "restaurant",
+    city: "Nice",
+    address: "18 Promenade des Anglais",
+    latitude: 43.6941,
+    longitude: 7.2589,
+    phone: "+33 4 93 44 44 44",
+    description: "Cuisine niçoise traditionnelle avec vue mer.",
+    dog_friendly: true,
+    terrace_allowed: true,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: true,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.6,
+    review_count: 88,
+  },
+  {
+    id: "place-10",
+    name: "La Cour des Vins",
+    category: "restaurant",
+    city: "Bordeaux",
+    address: "45 Rue Ferrère",
+    latitude: 44.8378,
+    longitude: -0.5744,
+    phone: "+33 5 56 55 55 55",
+    description: "Cuisine bordelaise, terrasse très accueillante.",
+    dog_friendly: true,
+    terrace_allowed: true,
+    inside_allowed: true,
+    leash_required: true,
+    water_bowl: true,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.7,
+    review_count: 115,
+  },
+  {
+    id: "place-11",
+    name: "Parc Bordelais",
+    category: "balade",
+    city: "Bordeaux",
+    address: "Avenue Général de Gaulle",
+    latitude: 44.8545,
+    longitude: -0.5758,
+    description: "Parc urbain idéal pour les promenades avec chien.",
+    dog_friendly: true,
+    terrace_allowed: false,
+    inside_allowed: false,
+    leash_required: true,
+    water_bowl: false,
+    beach_access: false,
+    parking_available: true,
+    wheelchair_accessible: true,
+    rating_avg: 4.8,
+    review_count: 104,
+  },
+];
+
+const fetchHotelFromQr = async (qrCode: string): Promise<Hotel | null> => {
+  const code = parseQrCode(qrCode);
+  if (!code) return null;
+
+  const normalized = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return qrHotelMap[normalized] || null;
+};
+
+const fetchPlaces = async (
+  baseLatitude: number,
+  baseLongitude: number,
+  categoryFilter?: string | null,
+  maxDistance = 20
+): Promise<Place[]> => {
+  const filtered = mockPlaces
+    .filter((place) => {
+      if (!place.dog_friendly) return false;
+      if (categoryFilter && place.category !== categoryFilter) return false;
+      return true;
+    })
+    .map((place) => {
+      const distance = getDistanceKm(
+        baseLatitude,
+        baseLongitude,
+        place.latitude,
+        place.longitude
+      );
+      return {
+        ...place,
+        distance_km: distance,
+      };
+    })
+    .filter((place) => (place.distance_km ?? 0) <= maxDistance)
+    .sort((a, b) => (a.distance_km ?? 0) - (b.distance_km ?? 0));
+
+  return filtered;
+};
 
 const App = () => {
   const [screen, setScreen] = useState<"scanner" | "list" | "detail">("scanner");
@@ -132,68 +425,6 @@ const App = () => {
 
   const [permission, requestPermission] = useCameraPermissions();
 
-  const fetchHotelFromQr = async (qrCode: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("qr_codes")
-        .select("hotel_id, hotels(*)")
-        .eq("code", qrCode)
-        .eq("is_active", true)
-        .single();
-
-      if (error || !data) return null;
-      return data.hotels as Hotel;
-    } catch (error) {
-      console.error("getHotelFromQr error", error);
-      return null;
-    }
-  };
-
-  const fetchPlaces = async (
-    baseLatitude: number,
-    baseLongitude: number,
-    categoryFilter?: string | null,
-    maxDistance = 20
-  ) => {
-    let query = supabase
-      .from("places")
-      .select("*")
-      .eq("status", "approved")
-      .eq("dog_friendly", true);
-
-    if (categoryFilter) {
-      query = query.eq("category_id", categoryFilter);
-    }
-
-    const { data, error } = await query;
-
-    if (error || !data) {
-      console.error("fetchPlaces error", error);
-      return [];
-    }
-
-    const mapped: any[] = data
-      .map((row: any) => {
-        const dist = getDistanceKm(
-          baseLatitude,
-          baseLongitude,
-          row.latitude,
-          row.longitude
-        );
-
-        if (dist > maxDistance) return null;
-
-        return {
-          ...transformPlace(row),
-          distance_km: dist,
-        };
-      })
-      .filter(Boolean)
-      .sort((a: any, b: any) => a.distance_km - b.distance_km);
-
-    return mapped as Place[];
-  };
-
   const useMyGps = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -209,21 +440,20 @@ const App = () => {
         accuracy: Location.Accuracy.Balanced,
       });
 
-      const loc = {
+      const location = {
         latitude: pos.coords.latitude,
         longitude: pos.coords.longitude,
       };
 
-      setUserLocation(loc);
+      setUserLocation(location);
       setGpsEnabled(true);
 
       const result = await fetchPlaces(
-        loc.latitude,
-        loc.longitude,
+        location.latitude,
+        location.longitude,
         selectedCategory,
         distanceKm
       );
-
       setPlaces(result);
     } catch (error) {
       console.error("GPS error:", error);
@@ -346,7 +576,10 @@ const App = () => {
     if (!selectedPlace) return null;
 
     return (
-      <ScrollView style={styles.detailContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.detailContainer}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.detailHeader}>
           <Text style={styles.detailTitle}>{selectedPlace.name}</Text>
           <Text style={styles.detailCategory}>{selectedPlace.category}</Text>
@@ -391,18 +624,14 @@ const App = () => {
           <Text style={styles.infoText}>{selectedPlace.city}</Text>
           {selectedPlace.phone && (
             <TouchableOpacity
-              onPress={() =>
-                Alert.alert("Téléphone", selectedPlace.phone || "")
-              }
+              onPress={() => Alert.alert("Téléphone", selectedPlace.phone || "")}
             >
               <Text style={styles.linkText}>{selectedPlace.phone}</Text>
             </TouchableOpacity>
           )}
           {selectedPlace.website && (
             <TouchableOpacity
-              onPress={() =>
-                Alert.alert("Site web", selectedPlace.website || "")
-              }
+              onPress={() => Alert.alert("Site web", selectedPlace.website || "")}
             >
               <Text style={styles.linkText}>{selectedPlace.website}</Text>
             </TouchableOpacity>
